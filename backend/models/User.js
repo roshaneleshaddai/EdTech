@@ -2,6 +2,15 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
+const preferencesSchema = mongoose.Schema(
+  {
+    teacher: { type: String, default: null },
+    classroom: { type: String, default: "default" },
+    notifications: { type: Boolean, default: true },
+  },
+  { _id: false }
+); // Do not create an _id for the nested preferences object
+
 const userSchema = mongoose.Schema(
   {
     username: {
@@ -18,14 +27,40 @@ const userSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+    firstName: {
+      // Added
+      type: String,
+      required: false, // Make optional for registration if you only collect username
+    },
+    lastName: {
+      // Added
+      type: String,
+      required: false, // Make optional for registration
+    },
+    avatar: {
+      // Added
+      type: String, // URL to avatar image
+      default: null, // No avatar initially
+    },
     role: {
       type: String,
       enum: ["student", "instructor", "admin"],
       default: "student",
     },
+    isActive: {
+      // Added
+      type: Boolean,
+      default: true,
+    },
+    preferences: preferencesSchema, // Added nested preferences schema
+    lastLogin: {
+      // Added
+      type: Date,
+      default: Date.now,
+    },
   },
   {
-    timestamps: true,
+    timestamps: true, // `createdAt` and `updatedAt` are handled by this
   }
 );
 
@@ -43,5 +78,5 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-const User = mongoose.model("User", userSchema, "users");
+const User = mongoose.model("User", userSchema);
 module.exports = User;

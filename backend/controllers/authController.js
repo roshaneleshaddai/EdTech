@@ -7,7 +7,7 @@ const generateToken = require("../utils/generateToken");
 // @route   POST /api/auth/register
 // @access  Public
 const registerUser = asyncHandler(async (req, res) => {
-  const { username, email, password, role } = req.body;
+  const { username, email, password, firstName, lastName, role } = req.body; // Added firstName, lastName
 
   // Check if user exists
   const userExists = await User.findOne({ email });
@@ -21,6 +21,8 @@ const registerUser = asyncHandler(async (req, res) => {
     username,
     email,
     password, // Password will be hashed by pre-save hook in model
+    firstName, // Added
+    lastName, // Added
     role: role || "student", // Default to student if not provided
   });
 
@@ -29,7 +31,12 @@ const registerUser = asyncHandler(async (req, res) => {
       _id: user._id,
       username: user.username,
       email: user.email,
+      firstName: user.firstName, // Include in response
+      lastName: user.lastName, // Include in response
       role: user.role,
+      avatar: user.avatar, // Include default avatar
+      preferences: user.preferences, // Include default preferences
+      lastLogin: user.lastLogin, // Include default lastLogin
       token: generateToken(user._id),
     });
   } else {
@@ -48,11 +55,20 @@ const loginUser = asyncHandler(async (req, res) => {
   const user = await User.findOne({ email });
 
   if (user && (await user.matchPassword(password))) {
+    // Update lastLogin timestamp on successful login
+    user.lastLogin = Date.now();
+    await user.save(); // Save the updated user
+
     res.json({
       _id: user._id,
       username: user.username,
       email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
       role: user.role,
+      avatar: user.avatar,
+      preferences: user.preferences,
+      lastLogin: user.lastLogin,
       token: generateToken(user._id),
     });
   } else {
@@ -65,14 +81,20 @@ const loginUser = asyncHandler(async (req, res) => {
 // @route   GET /api/auth/profile
 // @access  Private
 const getUserProfile = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id).select("-password"); // req.user is set by protect middleware
+  // req.user is set by protect middleware, already excludes password
+  const user = await User.findById(req.user._id).select("-password");
 
   if (user) {
     res.json({
       _id: user._id,
       username: user.username,
       email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
       role: user.role,
+      avatar: user.avatar,
+      preferences: user.preferences,
+      lastLogin: user.lastLogin,
     });
   } else {
     res.status(404);
@@ -85,4 +107,3 @@ module.exports = {
   loginUser,
   getUserProfile,
 };
-    
