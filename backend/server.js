@@ -5,6 +5,7 @@ const cors = require("cors");
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const courseRoutes = require("./routes/courseRoutes");
+const moduleRoutes = require("./routes/moduleRoutes"); // <<< Add this import
 
 dotenv.config(); // Load environment variables
 
@@ -14,11 +15,16 @@ const app = express();
 
 // Middleware
 app.use(express.json()); // Body parser for raw JSON
-app.use(cors({ origin: process.env.FRONTEND_URL })); // Allow requests from your frontend
+
+// IMPORTANT: Ensure process.env.FRONTEND_URL is set in your .env file
+// e.g., FRONTEND_URL=http://localhost:3000
+app.use(cors({ origin: process.env.FRONTEND_URL, credentials: true })); // Allow requests from your frontend
 
 // Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/courses", courseRoutes);
+app.use("/api/courses", courseRoutes); // Main course routes
+// --- Add this line to mount module routes nested under courseId ---
+app.use("/api/courses/:courseId/modules", moduleRoutes); // <<< New line
 
 // Basic route for home
 app.get("/", (req, res) => {

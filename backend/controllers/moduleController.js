@@ -34,7 +34,7 @@ const getModuleById = asyncHandler(async (req, res) => {
 // @route   POST /api/courses/:courseId/modules
 // @access  Private/Instructor
 const createModule = asyncHandler(async (req, res) => {
-  const { title, description, content, order, duration } = req.body;
+  const { title, description, content, order, duration, customId } = req.body;
   const courseId = req.params.courseId;
 
   // Check if course exists
@@ -57,13 +57,23 @@ const createModule = asyncHandler(async (req, res) => {
   const moduleOrder =
     order || (await Module.countDocuments({ course: courseId })) + 1;
 
+  // Build safe content defaults
+  const safeContent = content && typeof content === "object" ? content : {};
+  if (!safeContent.videoScript) safeContent.videoScript = "";
+
+  // Generate a default customId if missing
+  const generatedCustomId = customId && typeof customId === "string" && customId.trim().length > 0
+    ? customId.trim()
+    : `mod_${courseId}_${moduleOrder}_${Date.now()}`;
+
   const module = new Module({
     course: courseId,
     title,
     description,
-    content,
+    content: safeContent,
     order: moduleOrder,
     duration,
+    customId: generatedCustomId,
   });
 
   const createdModule = await module.save();

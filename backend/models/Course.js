@@ -1,21 +1,20 @@
 // backend/models/Course.js
 const mongoose = require("mongoose");
-const embeddedModuleSchema = require("./Module"); // Import the embedded module schema
+// We no longer import embeddedModuleSchema here, as modules are now referenced, not embedded directly.
 
-// Sub-schema for the final project details
+// Sub-schema for the final project details, embedded directly in the Course document
 const finalProjectSchema = mongoose.Schema(
   {
     title: { type: String, required: true },
     description: { type: String, required: true },
     requirements: [{ type: String }],
     evaluationCriteria: [{ type: String }],
-    // --- AI-Specific Addition ---
     aiProjectGenerationPrompt: { type: String }, // Prompt used by AI to create this project
   },
   { _id: false }
 );
 
-// Sub-schema for course ratings
+// Sub-schema for course ratings, embedded directly in the Course document
 const ratingSchema = mongoose.Schema(
   {
     average: { type: Number, default: 0 },
@@ -26,8 +25,9 @@ const ratingSchema = mongoose.Schema(
 
 const courseSchema = mongoose.Schema(
   {
-    // Custom string ID from your sample, useful for predefined courses
-    id: {
+    // A custom string ID for courses, useful for predefined courses (like 'predefined_web_dev_fundamentals')
+    customId: {
+      // Renamed from 'id' to 'customId' for clarity and to avoid conflict with MongoDB's _id
       type: String,
       required: false, // Can be null for dynamically created courses
       unique: true,
@@ -42,11 +42,11 @@ const courseSchema = mongoose.Schema(
       required: true,
     },
     estimatedDuration: {
-      // Added from sample
+      // Added from your sample
       type: String, // e.g., "8 hours", "2 weeks"
     },
     difficulty: {
-      // Added from sample
+      // Added from your sample
       type: String,
       enum: ["Beginner", "Intermediate", "Advanced", "Expert"],
       default: "Beginner",
@@ -59,64 +59,66 @@ const courseSchema = mongoose.Schema(
         "Data Science",
         "UI/UX",
         "Cloud Computing",
-        "AI/Machine Learning", // Added AI as a common category
+        "AI/Machine Learning",
         "Other",
       ],
       default: "Other",
     },
     tags: [
       {
-        // Added from sample
+        // Added from your sample
         type: String,
       },
     ],
 
-    // --- Modules are now EMBEDDED ---
-    modules: [embeddedModuleSchema], // Use the defined embeddedModuleSchema
+    // --- Modules are now REFERENCED by ObjectId ---
+    modules: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Module", // This references documents in the 'modules' collection
+      },
+    ],
 
-    finalProject: finalProjectSchema, // Added embedded final project details
+    finalProject: finalProjectSchema, // Embedded final project details
 
+    // `createdBy` refers to the User (Instructor/Admin) who initiated the course creation.
+    // This could be a human user or a system user for AI-generated courses.
     createdBy: {
-      // Can be a User ObjectId or just a string like 'AI' for predefined/generated
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       default: null, // If created by AI or system, this could be null
     },
-    // The instructor field is redundant if `createdBy` is the instructor,
-    // or if `createdBy` is for the system and `instructor` is for human oversight.
-    // For now, I'll assume `createdBy` covers the original instructor/source.
-    // If you need *both*, clarify if `createdBy` is initial source and `instructor` is active human tutor.
-    // Keeping `instructor` for now as it was in original, but `createdBy` is more aligned with sample.
+    // `instructor` explicitly refers to the human assigned as the primary instructor for the course.
+    // This allows distinguishing who created the course vs. who is currently teaching/managing it.
     instructor: {
-      // Original instructor field, if distinct from `createdBy`
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: false, // Not strictly required if createdBy handles it for AI courses
+      required: false, // A course might not have a direct human instructor if it's AI-led, but good to have.
     },
 
     isPredefined: {
-      // Added from sample (e.g., system courses)
+      // Added from your sample (e.g., system courses)
       type: Boolean,
       default: false,
     },
     isPublic: {
-      // Added from sample (visible to everyone)
+      // Added from your sample (visible to everyone)
       type: Boolean,
       default: true,
     },
     thumbnail: {
-      // Added from sample (URL to course thumbnail)
+      // Added from your sample (URL to course thumbnail)
       type: String,
       default: null,
     },
-    rating: ratingSchema, // Added embedded rating system
+    rating: ratingSchema, // Embedded rating system
     enrollmentCount: {
-      // Added from sample
+      // Added from your sample
       type: Number,
       default: 0,
     },
     completionCount: {
-      // Added from sample
+      // Added from your sample
       type: Number,
       default: 0,
     },
@@ -135,5 +137,6 @@ const courseSchema = mongoose.Schema(
   }
 );
 
+// Export as a Mongoose Model, to be used for a standalone collection named 'courses'
 const Course = mongoose.model("Course", courseSchema, "courses");
 module.exports = Course;

@@ -1,21 +1,24 @@
-// src/app/dashboard/[courseId]/page.js
+// src/app/dashboard/[courseId]/page.jsx
 "use client";
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useAITeacher } from "@/hooks/useAITeacher"; // Import your Zustand store
 
 export default function ExploreCoursePage() {
   const router = useRouter();
   const params = useParams();
-  const courseId = params.courseId; // Correctly access the dynamic route parameter
+  const courseId = params.id; // Access dynamic route param from folder name [id]
 
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Zustand actions for setting the AI Teacher state
+  const { setMode, setCurrentModule, setCurrentAssessment } = useAITeacher();
+
   useEffect(() => {
     const fetchCourseDetails = async () => {
       const token = localStorage.getItem("token");
-      // Layout should have already checked this, but good to have a local check
       if (!token) {
         router.push("/");
         return;
@@ -28,14 +31,13 @@ export default function ExploreCoursePage() {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`, // Send the token for protected endpoint
+              Authorization: `Bearer ${token}`,
             },
           }
         );
         const data = await response.json();
 
         if (response.ok) {
-          // Assign a random pastel color class for frontend display if not from backend
           const pastelColors = [
             "bg-blue-50/70",
             "bg-green-50/70",
@@ -55,7 +57,6 @@ export default function ExploreCoursePage() {
         } else {
           setError(data.message || "Failed to fetch course details.");
           console.error("Failed to fetch course details:", data.message);
-          // If the error is an authorization issue, redirect to login
           if (response.status === 401 || response.status === 403) {
             localStorage.removeItem("token");
             router.push("/");
@@ -72,10 +73,17 @@ export default function ExploreCoursePage() {
     };
 
     if (courseId) {
-      // Only fetch if courseId is available (not undefined during initial render)
       fetchCourseDetails();
     }
-  }, [courseId, router]); // Dependency array: re-run if courseId or router changes
+  }, [courseId, router]);
+
+  // Handler for the "Explain" button on each module card
+  const handleExplainModule = (moduleItem) => {
+    setCurrentModule(moduleItem);
+    setMode("module");
+    setCurrentAssessment(null);
+    router.push(`/dashboard/${courseId}/experience`);
+  };
 
   if (loading) {
     return (
@@ -106,6 +114,8 @@ export default function ExploreCoursePage() {
     );
   }
 
+  // Experience is now its own page at /dashboard/[id]/experience
+
   // Determine course progress (placeholder for now, needs actual user progress tracking)
   const totalModules = course.modules?.length || 0;
   const completedModules = 0; // This would come from user-specific progress data
@@ -120,7 +130,6 @@ export default function ExploreCoursePage() {
           onClick={() => router.push("/dashboard")}
           className="flex items-center text-lg font-semibold text-gray-700 hover:text-black transition duration-200"
         >
-          {/* Material Icon: Arrow Back */}
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className="h-6 w-6 mr-2"
@@ -170,55 +179,50 @@ export default function ExploreCoursePage() {
 
           {course.modules && course.modules.length > 0 ? (
             <ul className="space-y-4">
-              {course.modules.map((moduleItem, index) => (
+              {course.modules.map((moduleItem) => (
                 <li
-                  key={moduleItem._id} // Use backend _id for key
+                  key={moduleItem._id}
                   className={`p-6 rounded-2xl shadow-lg border border-gray-200
-                              ${
-                                false
-                                  ? "bg-white/90 hover:shadow-xl"
-                                  : "bg-white/70 hover:bg-white/80"
-                              }
+                              ${false // Placeholder for completion status styling
+                      ? "bg-white/90 hover:shadow-xl"
+                      : "bg-white/70 hover:bg-white/80"
+                    }
                               backdrop-blur-md transition-all duration-200 cursor-pointer flex justify-between items-center`}
                 >
                   <div className="flex items-center">
                     <div
-                      className={`mr-4 p-3 rounded-full ${
-                        false
-                          ? "bg-emerald-100 text-emerald-600"
-                          : "bg-gray-200 text-gray-600"
-                      }`}
+                      className={`mr-4 p-3 rounded-full ${false // Placeholder for completion status icon styling
+                        ? "bg-emerald-100 text-emerald-600"
+                        : "bg-gray-200 text-gray-600"
+                        }`}
                     >
-                      {/* Material Icon: Check Circle (Completed) or Play Circle (Incomplete) */}
+                      {/* Icon based on completion status (placeholder) */}
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         className="h-6 w-6"
                         viewBox="0 0 24 24"
                         fill="currentColor"
                       >
-                        {false // Replace with moduleItem.completed if you add completion status
-                          ? <path d="M0 0h24v24H0V0z" fill="none" /> && (
-                              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8.61l-9 9z" />
-                            )
-                          : <path d="M0 0h24v24H0V0z" fill="none" /> && (
-                              <path d="M10 16.5l6-4.5-6-4.5v9zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
-                            )}
+                        <path d="M0 0h24v24H0V0z" fill="none" />
+                        {false ? ( // Replace with actual moduleItem.isCompleted
+                          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8.61l-9 9z" />
+                        ) : (
+                          <path d="M10 16.5l6-4.5-6-4.5v9zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" />
+                        )}
                       </svg>
                     </div>
                     <div>
                       <h3
-                        className={`text-xl font-semibold ${
-                          false ? "text-gray-900" : "text-gray-800"
-                        }`}
+                        className={`text-xl font-semibold ${false ? "text-gray-900" : "text-gray-800"
+                          }`}
                       >
                         {moduleItem.order}. {moduleItem.title}
                       </h3>
                       <p
-                        className={`text-sm ${
-                          false
-                            ? "text-emerald-600 font-medium"
-                            : "text-gray-500"
-                        }`}
+                        className={`text-sm ${false
+                          ? "text-emerald-600 font-medium"
+                          : "text-gray-500"
+                          }`}
                       >
                         Estimated Time: {moduleItem.duration}
                       </p>
@@ -226,17 +230,14 @@ export default function ExploreCoursePage() {
                   </div>
 
                   <button
-                    className={`px-4 py-2 font-medium rounded-lg transition duration-200 ${
-                      false
-                        ? "bg-gray-200 text-gray-700 cursor-default"
-                        : "bg-black text-white hover:bg-gray-800"
-                    }`}
-                    disabled={false}
-                    onClick={() =>
-                      alert(`Starting module: ${moduleItem.title}`)
-                    } // Placeholder action
+                    className={`px-4 py-2 font-medium rounded-lg transition duration-200 ${false // Placeholder for completion status to disable
+                      ? "bg-gray-200 text-gray-700 cursor-default"
+                      : "bg-black text-white hover:bg-gray-800"
+                      }`}
+                    disabled={false} // Replace with actual moduleItem.isCompleted
+                    onClick={() => handleExplainModule(moduleItem)}
                   >
-                    Start
+                    Explain {/* Changed from "Start" to "Explain" */}
                   </button>
                 </li>
               ))}
